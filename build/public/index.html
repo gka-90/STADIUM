@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Campus Stadium Booking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        table { border-collapse: collapse; margin-bottom: 20px; }
+        td { width: 30px; height: 30px; text-align: center; border: 1px solid #ccc; font-weight: 600; }
+        .available { background-color: #d4edda; color: #155724; }
+        .booked { background-color: #f8d7da; color: #721c24; }
+        .status { min-height: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Campus Stadium Booking</h1>
+
+        <!-- Create Stadium -->
+        <h2>Create New Stadium (Admin)</h2>
+        <form id="createForm" class="mb-4">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" id="name" class="form-control" placeholder="Stadium Name" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" id="rows" class="form-control" placeholder="Rows" min="1" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" id="cols" class="form-control" placeholder="Columns" min="1" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Create</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Stadiums list -->
+        <h2>Available Stadiums</h2>
+        <ul id="stadiumList" class="list-group mb-4"></ul>
+
+        <!-- Availability -->
+        <h2>Check Availability</h2>
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <select id="stadiumSelect" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+                <button id="loadBtn" class="btn btn-primary w-100">Load</button>
+            </div>
+        </div>
+        <div id="seatsGrid" class="mb-4"></div>
+        <div id="status" class="status"></div>
+
+        <!-- Booking and cancellation -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <h3>Book a Seat</h3>
+                <form id="bookForm">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-4 col-md-3">
+                            <label class="form-label">Row</label>
+                            <input type="number" id="bookRow" class="form-control" placeholder="e.g. 0" min="0" required>
+                        </div>
+                        <div class="col-4 col-md-3">
+                            <label class="form-label">Col</label>
+                            <input type="number" id="bookCol" class="form-control" placeholder="e.g. 0" min="0" required>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label">Your Name</label>
+                            <input type="text" id="customer" class="form-control" placeholder="Your Name" required>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="submit" class="btn btn-success w-100">Book</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-6">
+                <h3>Cancel a Seat</h3>
+                <form id="cancelForm">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-4 col-md-3">
+                            <label class="form-label">Row</label>
+                            <input type="number" id="cancelRow" class="form-control" placeholder="e.g. 0" min="0" required>
+                        </div>
+                        <div class="col-4 col-md-3">
+                            <label class="form-label">Col</label>
+                            <input type="number" id="cancelCol" class="form-control" placeholder="e.g. 0" min="0" required>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <button type="submit" class="btn btn-danger w-100">Cancel</button>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <button id="undoBtn" type="button" class="btn btn-warning w-100">Undo Last</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+
+        function setStatus(msg, cls = 'text-success') {
+            statusEl.className = 'status ' + cls;
+            statusEl.textContent = msg;
+        }
+
+        // Load all stadiums
+        async function loadStadiums() {
+            const res = await fetch('/stadiums');
+            const data = await res.json();
+            const list = document.getElementById('stadiumList');
+            const select = document.getElementById('stadiumSelect');
+            list.innerHTML = '';
+            select.innerHTML = '';
+            if (!data.stadiums || data.stadiums.length === 0) {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                li.textContent = 'No stadiums yet — create one above.';
+                list.appendChild(li);
+                return;
+            }
+            data.stadiums.forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                li.textContent = s;
+                list.appendChild(li);
+
+                const option = document.createElement('option');
+                option.value = s;
+                option.textContent = s;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadAvailability() {
+            const stadium = document.getElementById('stadiumSelect').value;
+            if (!stadium) { setStatus('Please select a stadium', 'text-danger'); return; }
+            try {
+                const res = await fetch(`/availability/${encodeURIComponent(stadium)}`);
+                if (!res.ok) throw new Error('Stadium not found');
+                const seats = await res.json();
+
+                const grid = document.getElementById('seatsGrid');
+                grid.innerHTML = '';
+                const table = document.createElement('table');
+                seats.forEach((row, r) => {
+                    const tr = document.createElement('tr');
+                    row.forEach((seat, c) => {
+                        const td = document.createElement('td');
+                        td.textContent = seat;
+                        td.className = seat === 'A' ? 'available' : 'booked';
+                        td.title = `Row ${r}, Col ${c}`;
+                        tr.appendChild(td);
+                    });
+                    table.appendChild(tr);
+                });
+                grid.appendChild(table);
+                setStatus('Availability loaded.');
+            } catch (e) {
+                setStatus('Error loading stadium.', 'text-danger');
+            }
+        }
+
+        document.getElementById('loadBtn').addEventListener('click', loadAvailability);
+
+        document.getElementById('createForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const rows = parseInt(document.getElementById('rows').value, 10);
+            const cols = parseInt(document.getElementById('cols').value, 10);
+            if (!name || rows < 1 || cols < 1) {
+                setStatus('Please enter a valid stadium name, rows, and columns', 'text-danger');
+                return;
+            }
+            const res = await fetch('/create_stadium', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, rows, cols })
+            });
+            if (res.ok) {
+                setStatus('Stadium created!');
+                e.target.reset();
+                await loadStadiums();
+            } else {
+                setStatus('Error creating stadium', 'text-danger');
+            }
+        });
+
+        document.getElementById('bookForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const stadium = document.getElementById('stadiumSelect').value;
+            const row = parseInt(document.getElementById('bookRow').value, 10);
+            const col = parseInt(document.getElementById('bookCol').value, 10);
+            const customer = document.getElementById('customer').value.trim();
+            if (!stadium || row < 0 || col < 0 || !customer) {
+                setStatus('Please enter valid row, column, and name', 'text-danger');
+                return;
+            }
+            const res = await fetch(`/book/${encodeURIComponent(stadium)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ row, col, customer })
+            });
+            if (res.ok) {
+                setStatus('Seat booked!');
+                e.target.reset();
+                loadAvailability();
+            } else {
+                setStatus('Booking failed. Seat may be taken or invalid.', 'text-danger');
+            }
+        });
+
+        document.getElementById('cancelForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const stadium = document.getElementById('stadiumSelect').value;
+            const row = parseInt(document.getElementById('cancelRow').value, 10);
+            const col = parseInt(document.getElementById('cancelCol').value, 10);
+            if (!stadium || row < 0 || col < 0) {
+                setStatus('Please enter valid row and column', 'text-danger');
+                return;
+            }
+            const res = await fetch(`/cancel/${encodeURIComponent(stadium)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ row, col })
+            });
+            if (res.ok) {
+                setStatus('Booking cancelled.');
+                e.target.reset();
+                loadAvailability();
+            } else {
+                setStatus('Cancellation failed. Seat may not be booked.', 'text-danger');
+            }
+        });
+
+        document.getElementById('undoBtn').addEventListener('click', async () => {
+            const stadium = document.getElementById('stadiumSelect').value;
+            if (!stadium) { setStatus('Please select a stadium', 'text-danger'); return; }
+            const res = await fetch(`/undo/${encodeURIComponent(stadium)}`, { method: 'POST' });
+            if (res.ok) {
+                setStatus('Last action undone.');
+                loadAvailability();
+            } else {
+                setStatus('Nothing to undo or error occurred.', 'text-danger');
+            }
+        });
+
+        // Initial load
+        loadStadiums();
+    </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+/Users/gideonkobea/Desktop/Stadium_Booking/build/CMakeFiles/stadium_server.dir
+/Users/gideonkobea/Desktop/Stadium_Booking/build/CMakeFiles/edit_cache.dir
+/Users/gideonkobea/Desktop/Stadium_Booking/build/CMakeFiles/rebuild_cache.dir
