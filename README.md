@@ -98,11 +98,3 @@ All rights reserved.
 This project is shared **for viewing and educational purposes only**.
 - You may **view, run, and study** the code.
 - You may **not copy, redistribute, or use** it in commercial or academic submissions without explicit permission.
-
-
-
-
-- Demonstrates how **modern C++** can power a full web application.
-- Combines **SQL persistence** with **HTTP API** routing.
-- Simple **HTML/JS frontend** shows how to integrate with a C++ backend.
-- Example of building a **real-world system** with multiple languages (C++, SQL, HTML, CSS, JavaScript).
