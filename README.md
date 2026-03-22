@@ -59,11 +59,10 @@ Crow handles JSON serialization/deserialization, runs a multithreaded HTTP serve
 
 ## Usage
 1. **Build & Run**:
-   ```bash
-   cmake -S . -B build
-   cmake --build build --config Release
-   ./build/stadium_server
-   ```
+   cd build
+   cmake ...
+   ./stadium_server
+
 2. **Open UI**: [http://localhost:8080](http://localhost:8080) in a browser.
 3. **Try it out**:
    - Create a stadium.
